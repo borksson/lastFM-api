@@ -5,6 +5,11 @@
 
 import requests
 import json
+import requests_cache
+import time
+from IPython.core.display import clear_output
+
+requests_cache.install_cache()
 
 API_KEY = "ae4c5fa87182e5dafeb88f5a35ac73a8"
 USER_AGENT = "borkson"
@@ -38,9 +43,40 @@ def jprint(obj):
     print(text)
 
 r = lastfm_get({
-	'method': 'chart.gettopartists'
+		'method': 'chart.gettopartists'
 	})
 
 print(r.status_code)
 jprint(r.json())
 jprint(r.json()['artists']['@attr'])
+
+responses = []
+
+page = 1
+total_pages = 99999
+
+while page <= total_pages:
+	payload = {
+		'method': 'chart.gettopartists',
+		'limit': 500,
+		'page': page
+	}
+
+	print("Requesting page {}/{}".format(page, total_pages))
+	clear_output(wait=True)
+
+	response = lastfm_get(payload)
+
+	if response.status_code != 200:
+		print(response.text)
+		break
+
+	page = int(response.json()['artists']['@attr']['page'])
+	total_pages = int(response.json()['artists']['@attr']['totalPages'])
+
+	responses.append(response)
+
+	if not getattr(response, 'from_cache', False):
+		time.sleep(0.25)
+
+	page += 1
