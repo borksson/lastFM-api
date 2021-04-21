@@ -8,7 +8,10 @@ import json
 import requests_cache
 import time
 from IPython.core.display import clear_output
+import pandas as pd
+from tqdm import tqdm
 
+tqdm.pandas()
 requests_cache.install_cache()
 
 API_KEY = "ae4c5fa87182e5dafeb88f5a35ac73a8"
@@ -46,6 +49,22 @@ r = lastfm_get({
 		'method': 'chart.gettopartists'
 	})
 
+def lookup_tags(artist):
+    response = lastfm_get({
+        'method': 'artist.getTopTags',
+        'artist':  artist
+    })
+
+    if response.status_code != 200:
+        return None
+
+    tags = [t['name'] for t in response.json()['toptags']['tag'][:3]]
+    tags_str = ', '.join(tags)
+
+    if not getattr(response, 'from_cache', False):
+        time.sleep(0.25)
+    return tags_str
+
 print(r.status_code)
 jprint(r.json())
 jprint(r.json()['artists']['@attr'])
@@ -80,3 +99,28 @@ while page <= total_pages:
 		time.sleep(0.25)
 
 	page += 1
+
+r0 = responses[0]
+r0_json = r0.json()
+r0_artists = r0_json['artists']['artist']
+r0_df = pd.DataFrame(r0_artists)
+print(r0_df.head())
+
+frames = [pd.DataFrame(r.json()['artists']['artist']) for r in responses]
+artists = pd.concat(frames)
+print(artists.head())
+
+artists = artists.drop('image', axis=1)
+print(artists.head())
+
+print(artists.info())
+
+artists = artists.drop_duplicates().reset_index(drop=True)
+print(artists.describe())
+
+artists['tags'] = artists['name'].progress_apply(lookup_tags)
+print(artists.head())
+
+artists[["playcount", "listeners"]] = artists[["playcount", "listeners"]].astype(int)
+artists = artists.sort_values("listeners", ascending=False)
+artists.to_csv('artists.csv', index=False)
