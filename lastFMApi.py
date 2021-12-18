@@ -23,8 +23,10 @@ headers = {
 
 payload = {
 	'api_key': API_KEY,
-	'method': 'chart.gettopartists',
-	'format': 'json'
+	'method': 'track.getSimilar',
+	'format': 'json',
+	'track': 'believe',
+	'artist': 'cher'
 }
 
 r = requests.get('https://ws.audioscrobbler.com/2.0/', headers=headers, params=payload)
@@ -45,9 +47,7 @@ def jprint(obj):
     text = json.dumps(obj, sort_keys=True, indent=4)
     print(text)
 
-r = lastfm_get({
-		'method': 'chart.gettopartists'
-	})
+r = lastfm_get(payload)
 
 def lookup_tags(artist):
     response = lastfm_get({
@@ -72,7 +72,7 @@ jprint(r.json()['artists']['@attr'])
 responses = []
 
 page = 1
-total_pages = 99999
+total_pages = 2
 
 while page <= total_pages:
 	payload = {
